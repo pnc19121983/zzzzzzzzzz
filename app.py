@@ -1,8 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Cấu hình Gemini
-genai.configure(api_key=st.secrets["AIzaSyACFWxsjhnTruV05ap7-aSp_9DDQavGvHw"])
+# Cấu hình Gemini – dán trực tiếp API Key
+genai.configure(api_key="AIzaSyACFWxsjhnTruV05ap7-aSp_9DDQavGvHw")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Danh sách độ khó
@@ -57,7 +57,11 @@ else:
     st.markdown(f"🔢 **Câu {st.session_state.current_q + 1} / {st.session_state.max_questions}**")
 
     if "current_question_text" not in st.session_state:
-        q_text = generate_question(st.session_state.subject, st.session_state.grade, levels[st.session_state.difficulty])
+        q_text = generate_question(
+            st.session_state.subject,
+            st.session_state.grade,
+            levels[st.session_state.difficulty]
+        )
         st.session_state.current_question_text = q_text
         st.session_state.correct_answer = extract_answer(q_text)
 
@@ -71,14 +75,13 @@ else:
         correct = st.session_state.correct_answer
         user = answer.upper()
 
-        # Ghi log
         st.session_state.quiz_log.append({
             "question": st.session_state.current_question_text,
             "your_answer": user,
             "correct_answer": correct
         })
 
-        # Chấm điểm
+        # Chấm điểm & điều chỉnh độ khó
         if user == correct:
             st.success("✅ Chính xác!")
             st.session_state.score += 1
@@ -89,12 +92,11 @@ else:
             if st.session_state.difficulty > 0:
                 st.session_state.difficulty -= 1
 
-        # Chuẩn bị câu tiếp
         st.session_state.current_q += 1
-        del st.session_state.current_question_text  # xóa để tạo mới
+        del st.session_state.current_question_text
         del st.session_state.correct_answer
 
-        # Kết thúc hay chưa?
+        # Kết thúc bài kiểm tra
         if st.session_state.current_q >= st.session_state.max_questions:
             st.session_state.started = False
             st.success("🎉 Bạn đã hoàn thành bài kiểm tra!")
@@ -107,7 +109,6 @@ else:
                     st.markdown(f"🔹 Bạn chọn: `{log['your_answer']}` | ✅ Đáp án đúng: `{log['correct_answer']}`")
                     st.markdown("---")
 
-            # Reset nút bắt đầu lại
             if st.button("🔁 Làm lại từ đầu"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
