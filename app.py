@@ -12,30 +12,35 @@ levels = ["Dễ", "Trung bình", "Khó"]
 def generate_question(subject, grade, level):
     prompt = f"""
     Tạo 1 câu hỏi trắc nghiệm {level.lower()} cho học sinh lớp {grade}, môn {subject}.
-    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối.
+    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối dưới dạng "Đáp án: A".
     """
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        st.error(f"❌ Lỗi khi tạo câu hỏi từ Gemini: {e}")
+        return "Không thể tạo câu hỏi. Vui lòng thử lại sau."
 
-# Kiểm tra đáp án đúng từ văn bản AI
+# Tách đáp án đúng từ văn bản
 def extract_answer(text):
     for line in text.split('\n'):
         if "Đáp án" in line:
             return line.strip().split(":")[-1].strip().upper()
-    return None
+    return "A"  # fallback nếu không tìm thấy đáp án
 
-# Streamlit UI
+# Giao diện Streamlit
 st.title("🎯 Bài kiểm tra thích ứng bằng Gemini AI")
 
-# Bước 1: Nhập thông tin cá nhân
+# Khởi tạo trạng thái
 if "started" not in st.session_state:
     st.session_state.started = False
     st.session_state.current_q = 0
     st.session_state.score = 0
-    st.session_state.difficulty = 0  # 0: Dễ, 1: TB, 2: Khó
+    st.session_state.difficulty = 0
     st.session_state.max_questions = 5
     st.session_state.quiz_log = []
 
+# Bước 1: Nhập thông tin cá nhân
 if not st.session_state.started:
     name = st.text_input("👤 Họ và tên")
     school = st.text_input("🏫 Trường")
@@ -65,9 +70,16 @@ else:
         st.session_state.current_question_text = q_text
         st.session_state.correct_answer = extract_answer(q_text)
 
-    question_lines = [line for line in st.session_state.current_question_text.split("\n") if line.strip() and "Đáp án" not in line]
+    # Hiển thị câu hỏi (ẩn dòng đáp án)
+    question_lines = [
+        line for line in st.session_state.current_question_text.split("\n")
+        if line.strip() and "Đáp án" not in line
+    ]
     question_text = "\n".join(question_lines)
     st.markdown(question_text)
+
+    # Hiển thị debug nếu cần
+    # st.expander("🔍 Xem nội dung AI trả về").markdown(st.session_state.current_question_text)
 
     answer = st.radio("Chọn đáp án của bạn:", ["A", "B", "C", "D"], key=st.session_state.current_q)
 
@@ -81,7 +93,6 @@ else:
             "correct_answer": correct
         })
 
-        # Chấm điểm & điều chỉnh độ khó
         if user == correct:
             st.success("✅ Chính xác!")
             st.session_state.score += 1
@@ -96,7 +107,7 @@ else:
         del st.session_state.current_question_text
         del st.session_state.correct_answer
 
-        # Kết thúc bài kiểm tra
+        # Kết thúc hay chưa?
         if st.session_state.current_q >= st.session_state.max_questions:
             st.session_state.started = False
             st.success("🎉 Bạn đã hoàn thành bài kiểm tra!")
