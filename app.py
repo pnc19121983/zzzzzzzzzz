@@ -48,7 +48,7 @@ if not st.session_state.started:
         st.session_state.grade = grade
         st.session_state.subject = subject
         st.session_state.started = True
-        st.experimental_rerun()
+        st.rerun()
 
 # Bước 2: Làm bài
 else:
@@ -112,6 +112,6 @@ else:
             if st.button("🔁 Làm lại từ đầu"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
-                st.experimental_rerun()
+                st.rerun()
         else:
-            st.experimental_rerun()
+            st.rerun()
