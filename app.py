@@ -13,7 +13,7 @@ levels = ["Dễ", "Trung bình", "Khó", "Rất khó"]
 def generate_question(subject, grade, level):
     prompt = f"""
     Tạo 1 câu hỏi trắc nghiệm {level.lower()} cho học sinh lớp {grade}, môn {subject}.
-    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối dưới dạng "Đáp án: A". Các câu hỏi rõ ràng, chữ viết đúng chính tả, chuẩn mực, đúng theo chương trình giáo dục phổ thông 2018 của Việt Nam
+    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối dưới dạng "Đáp án: A". Các câu hỏi rõ ràng, chữ viết đúng chính tả, chuẩn mực, đúng theo chương trình giáo dục phổ thông 2018 của Việt Nam. Câu hỏi có hình vẽ thì cần vẽ hình rõ ràng, chính xác
     """
     try:
         response = model.generate_content(prompt)
