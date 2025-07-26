@@ -3,7 +3,7 @@ import google.generativeai as genai
 import re
 
 # ✅ Cấu hình Gemini – dán trực tiếp API Key
-genai.configure(api_key="YOUR_API_KEY_HERE")  # <-- Thay YOUR_API_KEY_HERE bằng key của bạn
+genai.configure(api_key="AIzaSyACFWxsjhnTruV05ap7-aSp_9DDQavGvHw")  # <-- Thay YOUR_API_KEY_HERE bằng key của bạn
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ✅ Danh sách độ khó
