@@ -13,7 +13,7 @@ levels = ["Dễ", "Trung bình", "Khó", "Rất khó"]
 def generate_question(subject, grade, level):
     prompt = f"""
     Tạo 1 câu hỏi trắc nghiệm {level.lower()} cho học sinh lớp {grade}, môn {subject}.
-    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối dưới dạng "Đáp án: A".
+    Bao gồm 4 lựa chọn (A, B, C, D) và đánh dấu đáp án đúng rõ ràng ở cuối dưới dạng "Đáp án: A". Các câu hỏi rõ ràng, chữ viết đúng chính tả, chuẩn mực, đúng theo chương trình giáo dục phổ thông 2018 của Việt Nam
     """
     try:
         response = model.generate_content(prompt)
@@ -56,7 +56,7 @@ def parse_question(text):
         }
 
 # ✅ UI chính
-st.title("🎯 Bài kiểm tra thích ứng bằng Gemini AI")
+st.title("🎯 KIỂM TRA NĂNG LỰC")
 
 # ✅ Trạng thái ban đầu
 if "started" not in st.session_state:
