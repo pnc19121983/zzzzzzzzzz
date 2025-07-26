@@ -7,7 +7,7 @@ genai.configure(api_key="AIzaSyACFWxsjhnTruV05ap7-aSp_9DDQavGvHw")  # <-- Thay Y
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ✅ Danh sách độ khó
-levels = ["Dễ", "Trung bình", "Khó"]
+levels = ["Dễ", "Trung bình", "Khó", "Rất khó"]
 
 # ✅ Tạo câu hỏi từ Gemini
 def generate_question(subject, grade, level):
@@ -64,7 +64,7 @@ if "started" not in st.session_state:
     st.session_state.current_q = 0
     st.session_state.score = 0
     st.session_state.difficulty = 0
-    st.session_state.max_questions = 5
+    st.session_state.max_questions = 15
     st.session_state.quiz_log = []
 
 # ✅ Bước 1: Nhập thông tin
@@ -72,7 +72,7 @@ if not st.session_state.started:
     name = st.text_input("👤 Họ và tên")
     school = st.text_input("🏫 Trường")
     grade = st.selectbox("🎓 Lớp", list(range(1, 13)))
-    subject = st.selectbox("📘 Môn học", ["Toán", "Lý", "Hóa", "Tiếng Anh", "Sinh"])
+    subject = st.selectbox("📘 Môn học", ["Toán", "Tiếng Việt", "Tiếng Anh", "Tin học","Vật lí", "Hóa học", "Sinh học", "Lịch sử", "Địa lí"])
 
     if st.button("🚀 Bắt đầu làm bài") and name and school:
         st.session_state.name = name
