@@ -1,70 +1,128 @@
+# app.py
+import streamlit as st
+from auth import login_page
+from classroom import classroom_app
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if st.session_state.logged_in:
+    classroom_app()
+else:
+    login_page()
+
+
+# auth.py
+import streamlit as st
+
+def login_page():
+    st.title("\U0001F510 Đăng nhập vào phần mềm")
+
+    if "account" not in st.session_state:
+        st.session_state.account = {}
+
+    tab1, tab2 = st.tabs(["Đăng nhập", "Đăng ký"])
+
+    with tab1:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Mật khẩu", type="password", key="login_pass")
+        if st.button("Đăng nhập"):
+            acc = st.session_state.account.get(email)
+            if acc and acc["password"] == password:
+                st.success("✅ Đăng nhập thành công!")
+                st.session_state.logged_in = True
+                st.session_state.current_user = email
+                st.experimental_rerun()
+            else:
+                st.error("❌ Sai tài khoản hoặc mật khẩu.")
+
+    with tab2:
+        email = st.text_input("Email", key="register_email")
+        password = st.text_input("Tạo mật khẩu", type="password", key="register_pass")
+        name = st.text_input("Họ tên giáo viên")
+        school = st.text_input("Trường")
+        ward = st.text_input("Xã/Phường")
+
+        if st.button("Đăng ký"):
+            if email in st.session_state.account:
+                st.warning("⚠️ Email đã được đăng ký.")
+            else:
+                st.session_state.account[email] = {
+                    "password": password,
+                    "name": name,
+                    "school": school,
+                    "ward": ward
+                }
+                st.success("🎉 Đăng ký thành công! Vui lòng đăng nhập.")
+
+
+# classroom.py
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
 
-# Cấu hình Gemini 1.5 Flash
-genai.configure(api_key="AIzaSyBwr6QBpHRYSTMsMTm3KwLnM4GO2TotuP4")
+genai.configure(api_key="YOUR_GEMINI_API_KEY")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Tiêu đề
-st.title("📚 Quản lí lớp học bằng AI")
+def classroom_app():
+    st.title("📚 Quản lý lớp học bằng AI")
 
-# 1. Đăng ký giáo viên
-st.header("1. Đăng ký thông tin giáo viên")
-with st.form("register_form"):
-    name = st.text_input("Họ và tên giáo viên")
-    school = st.text_input("Trường")
-    ward = st.text_input("Xã / Phường")
-    submitted = st.form_submit_button("Lưu thông tin")
-    if submitted:
-        st.success(f"Giáo viên {name} - {school}, {ward} đã đăng ký thành công.")
+    user_email = st.session_state.current_user
+    teacher = st.session_state.account[user_email]
 
-# 2. Tạo lớp học
-st.header("2. Tạo lớp học")
-class_name = st.text_input("Tên lớp học")
+    st.markdown(f"👩‍🏫 **{teacher['name']}** - *{teacher['school']}, {teacher['ward']}*")
+    st.button("Đăng xuất", on_click=lambda: logout())
 
-# 3. Nhập danh sách học sinh từ Excel
-st.header("3. Nhập danh sách lớp từ Excel")
-uploaded_file = st.file_uploader("Tải lên file Excel", type=["xlsx"])
-students_df = None
-if uploaded_file:
-    students_df = pd.read_excel(uploaded_file)
-    st.dataframe(students_df)
+    st.header("1. Tạo lớp học")
+    class_name = st.text_input("Tên lớp học")
 
-# 4. Xây dựng kế hoạch tuần bằng AI
-st.header("4. Lập kế hoạch tuần bằng AI")
-week_topic = st.text_input("Chủ đề / nội dung tuần")
-if st.button("Tạo kế hoạch"):
-    if week_topic:
-        response = model.generate_content(
-            f"Tôi là giáo viên. Hãy giúp tôi lập kế hoạch dạy học trong tuần về chủ đề: {week_topic}. "
-            "Trình bày dạng bảng: Thứ, Nội dung, Hoạt động, Ghi chú."
-        )
-        st.markdown(response.text)
-    else:
-        st.warning("Hãy nhập chủ đề tuần.")
+    st.header("2. Nhập danh sách học sinh từ Excel")
+    uploaded_file = st.file_uploader("Tải file Excel", type=["xlsx"])
+    students_df = None
+    if uploaded_file:
+        students_df = pd.read_excel(uploaded_file)
+        st.dataframe(students_df)
 
-# 5. Tạo thông báo gửi phụ huynh
-st.header("5. Tạo thông báo gửi phụ huynh")
-message_content = st.text_area("Nội dung chính cần thông báo (ví dụ: nghỉ học, kiểm tra...)")
-if st.button("Soạn thông báo"):
-    if message_content:
-        response = model.generate_content(
-            f"Tạo một thông báo lịch sự, ngắn gọn gửi cho phụ huynh học sinh với nội dung: {message_content}"
-        )
-        st.info(response.text)
-    else:
-        st.warning("Nhập nội dung cần thông báo.")
+    st.header("3. Lập kế hoạch tuần bằng AI")
+    week_topic = st.text_input("Chủ đề tuần")
+    if st.button("Tạo kế hoạch"):
+        if week_topic:
+            response = model.generate_content(
+                f"Lập kế hoạch dạy học tuần với chủ đề: {week_topic}. "
+                "Trình bày theo bảng gồm: Thứ, Nội dung, Hoạt động, Ghi chú."
+            )
+            st.markdown(response.text)
+        else:
+            st.warning("Vui lòng nhập chủ đề.")
 
-# 6. Phân tích kết quả học tập
-st.header("6. Phân tích kết quả học tập & định hướng")
-if students_df is not None:
-    if st.button("Phân tích kết quả học tập"):
+    st.header("4. Soạn thông báo gửi phụ huynh")
+    message = st.text_area("Nội dung cần thông báo")
+    if st.button("Soạn thông báo"):
+        if message:
+            response = model.generate_content(
+                f"Tạo một thông báo ngắn gọn, lịch sự gửi phụ huynh: {message}"
+            )
+            st.info(response.text)
+        else:
+            st.warning("Vui lòng nhập nội dung.")
+
+    st.header("5. Phân tích kết quả học tập")
+    if students_df is not None and st.button("Phân tích kết quả"):
         result = model.generate_content(
-            f"Dựa trên dữ liệu sau đây, hãy phân tích tình hình học tập và rèn luyện, "
-            f"và đưa ra định hướng cá nhân hoặc chung cho học sinh:\n\n{students_df.to_string(index=False)}"
+            f"Phân tích kết quả học tập và hành vi của học sinh từ dữ liệu sau:\n\n{students_df.to_string(index=False)}"
         )
         st.markdown(result.text)
-else:
-    st.info("Vui lòng tải file Excel để phân tích.")
+    elif students_df is None:
+        st.info("Bạn cần tải file Excel trước.")
 
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.current_user = ""
+    st.experimental_rerun()
+
+
+# requirements.txt
+streamlit>=1.34.0
+pandas>=2.2.0
+openpyxl>=3.1.2
+google-generativeai>=0.5.0
