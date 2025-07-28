@@ -1,165 +1,70 @@
 import streamlit as st
+import pandas as pd
 import google.generativeai as genai
-import re
 
-# ✅ Cấu hình Gemini – dán trực tiếp API Key
-genai.configure(api_key="AIzaSyACFWxsjhnTruV05ap7-aSp_9DDQavGvHw")  # <-- Thay YOUR_API_KEY_HERE bằng key của bạn
+# Cấu hình Gemini 1.5 Flash
+genai.configure(api_key="AIzaSyBwr6QBpHRYSTMsMTm3KwLnM4GO2TotuP4")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# ✅ Danh sách độ khó
-levels = ["Dễ", "Trung bình", "Khó", "Rất khó"]
+# Tiêu đề
+st.title("📚 Quản lí lớp học bằng AI")
 
-# ✅ Tạo câu hỏi từ Gemini
-def generate_question(subject, grade, level):
-    prompt = f"""
-    Tạo 1 câu hỏi trắc nghiệm {level.lower()} cho học sinh lớp {grade}, môn {subject}, theo chương trình giáo dục phổ thông 2018 của Việt Nam.
-    Trả về định dạng JSON:
-    {{
-      "question": "Nội dung câu hỏi",
-      "options": {{
-        "A": "Lựa chọn A",
-        "B": "Lựa chọn B",
-        "C": "Lựa chọn C",
-        "D": "Lựa chọn D"
-      }},
-      "answer": "A"
-    }}
-    Câu hỏi rõ ràng, đúng chính tả, phù hợp với chương trình học.
-    """
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        st.error(f"❌ Lỗi khi gọi Gemini: {e}")
-        return "Không thể tạo câu hỏi. Vui lòng thử lại sau."
+# 1. Đăng ký giáo viên
+st.header("1. Đăng ký thông tin giáo viên")
+with st.form("register_form"):
+    name = st.text_input("Họ và tên giáo viên")
+    school = st.text_input("Trường")
+    ward = st.text_input("Xã / Phường")
+    submitted = st.form_submit_button("Lưu thông tin")
+    if submitted:
+        st.success(f"Giáo viên {name} - {school}, {ward} đã đăng ký thành công.")
 
-# ✅ Trích xuất đáp án đúng từ nội dung
-def extract_answer(text):
-    for line in text.split('\n'):
-        if "Đáp án" in line:
-            return line.strip().split(":")[-1].strip().upper()
-    return "A"
+# 2. Tạo lớp học
+st.header("2. Tạo lớp học")
+class_name = st.text_input("Tên lớp học")
 
-# ✅ Phân tích câu hỏi & lựa chọn
-def parse_question(text):
-    lines = text.strip().split("\n")
-    lines = [l for l in lines if l.strip() and "Đáp án" not in l]
-    joined = " ".join(lines)
-    
-    pattern = r"^(.*?)(?:\s*)A[.\):\-]?\s*(.*?)\s*B[.\):\-]?\s*(.*?)\s*C[.\):\-]?\s*(.*?)\s*D[.\):\-]?\s*(.*)"
-    match = re.match(pattern, joined, re.IGNORECASE)
+# 3. Nhập danh sách học sinh từ Excel
+st.header("3. Nhập danh sách lớp từ Excel")
+uploaded_file = st.file_uploader("Tải lên file Excel", type=["xlsx"])
+students_df = None
+if uploaded_file:
+    students_df = pd.read_excel(uploaded_file)
+    st.dataframe(students_df)
 
-    if match:
-        question = match.group(1).strip()
-        options = {
-            "A": match.group(2).strip(),
-            "B": match.group(3).strip(),
-            "C": match.group(4).strip(),
-            "D": match.group(5).strip(),
-        }
-        return question, options
-    else:
-        return joined, {
-            "A": "Lựa chọn A",
-            "B": "Lựa chọn B",
-            "C": "Lựa chọn C",
-            "D": "Lựa chọn D"
-        }
-
-# ✅ UI chính
-st.title("🎯 KIỂM TRA NĂNG LỰC")
-
-# ✅ Trạng thái ban đầu
-if "started" not in st.session_state:
-    st.session_state.started = False
-    st.session_state.current_q = 0
-    st.session_state.score = 0
-    st.session_state.difficulty = 0
-    st.session_state.max_questions = 15
-    st.session_state.quiz_log = []
-
-# ✅ Bước 1: Nhập thông tin
-if not st.session_state.started:
-    name = st.text_input("👤 Họ và tên")
-    school = st.text_input("🏫 Trường")
-    grade = st.selectbox("🎓 Lớp", list(range(1, 13)))
-    subject = st.selectbox("📘 Môn học", ["Toán", "Tiếng Việt", "Tiếng Anh", "Tin học","Vật lí", "Hóa học", "Sinh học", "Lịch sử", "Địa lí"])
-
-    if st.button("🚀 Bắt đầu làm bài") and name and school:
-        st.session_state.name = name
-        st.session_state.school = school
-        st.session_state.grade = grade
-        st.session_state.subject = subject
-        st.session_state.started = True
-        st.rerun()
-
-# ✅ Bước 2: Làm bài
-else:
-    st.markdown(f"👤 **Học sinh:** {st.session_state.name} | 🏫 **Trường:** {st.session_state.school}")
-    st.markdown(f"📘 **Môn:** {st.session_state.subject} | 🎓 **Lớp:** {st.session_state.grade}")
-    st.markdown(f"🔢 **Câu {st.session_state.current_q + 1} / {st.session_state.max_questions}**")
-
-    # Tạo câu hỏi nếu chưa có
-    if "current_question_text" not in st.session_state:
-        q_text = generate_question(
-            st.session_state.subject,
-            st.session_state.grade,
-            levels[st.session_state.difficulty]
+# 4. Xây dựng kế hoạch tuần bằng AI
+st.header("4. Lập kế hoạch tuần bằng AI")
+week_topic = st.text_input("Chủ đề / nội dung tuần")
+if st.button("Tạo kế hoạch"):
+    if week_topic:
+        response = model.generate_content(
+            f"Tôi là giáo viên. Hãy giúp tôi lập kế hoạch dạy học trong tuần về chủ đề: {week_topic}. "
+            "Trình bày dạng bảng: Thứ, Nội dung, Hoạt động, Ghi chú."
         )
-        st.session_state.current_question_text = q_text
-        st.session_state.correct_answer = extract_answer(q_text)
+        st.markdown(response.text)
+    else:
+        st.warning("Hãy nhập chủ đề tuần.")
 
-    q_text = st.session_state.current_question_text
-    question_text, options = parse_question(q_text)
+# 5. Tạo thông báo gửi phụ huynh
+st.header("5. Tạo thông báo gửi phụ huynh")
+message_content = st.text_area("Nội dung chính cần thông báo (ví dụ: nghỉ học, kiểm tra...)")
+if st.button("Soạn thông báo"):
+    if message_content:
+        response = model.generate_content(
+            f"Tạo một thông báo lịch sự, ngắn gọn gửi cho phụ huynh học sinh với nội dung: {message_content}"
+        )
+        st.info(response.text)
+    else:
+        st.warning("Nhập nội dung cần thông báo.")
 
-    st.markdown(f"#### ❓ {question_text}")
-    answer = st.radio(
-        "🔘 Chọn đáp án của bạn:",
-        options.keys(),
-        format_func=lambda x: f"{x}. {options[x]}",
-        key=st.session_state.current_q
-    )
+# 6. Phân tích kết quả học tập
+st.header("6. Phân tích kết quả học tập & định hướng")
+if students_df is not None:
+    if st.button("Phân tích kết quả học tập"):
+        result = model.generate_content(
+            f"Dựa trên dữ liệu sau đây, hãy phân tích tình hình học tập và rèn luyện, "
+            f"và đưa ra định hướng cá nhân hoặc chung cho học sinh:\n\n{students_df.to_string(index=False)}"
+        )
+        st.markdown(result.text)
+else:
+    st.info("Vui lòng tải file Excel để phân tích.")
 
-    # Nộp câu trả lời
-    if st.button("📨 Nộp câu trả lời"):
-        correct = st.session_state.correct_answer
-        user = answer.upper()
-
-        st.session_state.quiz_log.append({
-            "question": q_text,
-            "your_answer": user,
-            "correct_answer": correct
-        })
-
-        if user == correct:
-            st.success("✅ Chính xác!")
-            st.session_state.score += 1
-            if st.session_state.difficulty < 2:
-                st.session_state.difficulty += 1
-        else:
-            st.error(f"❌ Sai! Đáp án đúng là {correct}")
-            if st.session_state.difficulty > 0:
-                st.session_state.difficulty -= 1
-
-        st.session_state.current_q += 1
-        del st.session_state.current_question_text
-        del st.session_state.correct_answer
-
-        if st.session_state.current_q >= st.session_state.max_questions:
-            st.session_state.started = False
-            st.success("🎉 Bạn đã hoàn thành bài kiểm tra!")
-            st.markdown(f"**✅ Số câu đúng: {st.session_state.score} / {st.session_state.max_questions}**")
-
-            with st.expander("📋 Xem lại chi tiết câu hỏi"):
-                for i, log in enumerate(st.session_state.quiz_log):
-                    st.markdown(f"**Câu {i+1}:**")
-                    st.markdown(log["question"])
-                    st.markdown(f"🔹 Bạn chọn: `{log['your_answer']}` | ✅ Đáp án đúng: `{log['correct_answer']}`")
-                    st.markdown("---")
-
-            if st.button("🔁 Làm lại từ đầu"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
-        else:
-            st.rerun()
