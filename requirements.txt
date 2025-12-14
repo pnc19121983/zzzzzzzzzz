@@ -1,0 +1,6 @@
+streamlit
+pinecone-client
+google-generative-ai
+pypdf
+python-docx
+langchain-text-splitters
